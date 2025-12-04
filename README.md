@@ -45,6 +45,8 @@
 ### AI Assistant
 
 - **Gemini Chat** - Built-in AI powered by Google Gemini (key required)
+- **Markdown Formatting** - Responses with code highlighting (NEW v1.4.3)
+- **Custom Instructions** - Configurable AI behavior (NEW v1.4.3)
 - **Collapsible Sidebar** - Minimize for maximum drawing space
 
 ### Selection & Editing
