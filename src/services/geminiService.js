@@ -1,6 +1,6 @@
 
-// Gemini API Key
-export const GEMINI_API_KEY = 'AIzaSyB-7kyxHitjuR89qN-5QsXnbG085TH_Maw';
+// Gemini API Key - Load from environment variable
+export const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent';
 

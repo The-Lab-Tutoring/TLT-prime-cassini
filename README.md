@@ -63,12 +63,27 @@
 # Install dependencies
 npm install
 
+# Set up API key
+# 1. Copy .env.example to .env
+cp .env.example .env
+
+# 2. Edit .env and add your Gemini API key
+# VITE_GEMINI_API_KEY=your_actual_api_key_here
+
 # Run development server
 npm run dev
 
 # Build for production
 npm run build
 ```
+
+**Getting a Gemini API Key:**
+
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a new API key
+3. Add it to your `.env` file
+
+**Note:** Never commit your `.env` file to git. It's already in `.gitignore`.
 
 ## 🎨 Design
 
