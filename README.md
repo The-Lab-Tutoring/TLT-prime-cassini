@@ -1,6 +1,6 @@
 # Cassini
 
-**Version 1.4.3** - Premium infinite whiteboard with AI assistance, markdown chat, and flexible layouts
+**Version 1.4.3b** - Premium infinite whiteboard with AI chat, image manipulation, and flexible layouts
 
 ## ✨ Features
 
@@ -100,12 +100,19 @@ Apple "Liquid Glass" aesthetic with glassmorphism effects, smooth animations, an
 - Lucide React Icons
 - Google Gemini API
 
-## 📝 What's New in v1.4.3
+## 📝 What's New in v1.4.3b
 
-- **Markdown Chat Formatting**: AI responses now render with proper markdown including headings, lists, bold, italic, and links
-- **Code Syntax Highlighting**: Code blocks in chat with beautiful syntax highlighting  
-- **Custom AI Instructions**: Configure system prompt for personalized AI behavior
-- **Improved Chat Typography**: Better readability and spacing in conversation
+- **Image Resize Handles**: 8-point resize handles on selected images/shapes
+- **Image Rotation**: Orange rotation handle for free rotation of elements
+- **Aspect Ratio Lock**: Maintains proportions during resize (enabled by default)
+- **Real-time Selection Updates**: Selection box syncs with element during transforms
+- **Zoom Safety**: Fixed zoom out issues with position validation
+
+### v1.4.3a - AI Chat Enhancements
+
+- Markdown chat formatting with syntax highlighting
+- Custom AI instructions via system prompt
+- Improved chat typography
 
 ### Recent Updates
 

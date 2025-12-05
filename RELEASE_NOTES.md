@@ -1,5 +1,41 @@
 # Cassini - Release Notes
 
+## Version 1.4.3b - Image Manipulation & Transforms
+
+**Release Date:** December 5, 2024
+
+### 🚀 New Features
+
+#### Image & Shape Manipulation
+
+- ✅ **8-Point Resize Handles** - Corner and edge handles for precise resizing
+  - NW, N, NE, E, SE, S, SW, W handles on selected images/shapes
+  - Minimum size constraint (20px) prevents collapse
+- ✅ **Rotation Handle** - Free rotation of images and shapes
+  - Orange circle handle above selected element
+  - Dashed line connecting to element for visual reference
+  - Rotation calculated from element center
+- ✅ **Aspect Ratio Lock** - Maintains proportions during resize
+  - Enabled by default for intuitive resizing
+  - Proportional scaling from any corner or edge
+
+### 🔧 Bug Fixes
+
+- ✅ **Zoom Safety** - Fixed zoom out causing elements to disappear
+  - Added validation for scale ratio calculations
+  - Position clamping to prevent extreme values
+  - NaN/Infinity guard for viewport coordinates
+- ✅ **Real-time Selection Updates** - Selection box now syncs with element during resize/rotate
+
+### 🔧 Technical Improvements
+
+- Added state variables: `resizeHandle`, `isResizing`, `resizeStart`, `lockAspectRatio`
+- Rotation support in `drawImage` with canvas transform
+- Handle hit detection with `getHandleAtPoint` helper
+- Selection box syncing with `setSelectedElements` during transforms
+
+---
+
 ## Version 1.4.3 - AI Chat Markdown & Formatting
 
 **Release Date:** December 4, 2024

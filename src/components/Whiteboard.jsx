@@ -16,6 +16,12 @@ const Whiteboard = () => {
     const [isPanning, setIsPanning] = useState(false);
     const [currentShape, setCurrentShape] = useState(null); // For shape preview
 
+    // Image manipulation states
+    const [resizeHandle, setResizeHandle] = useState(null); // 'nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w', 'rotate'
+    const [isResizing, setIsResizing] = useState(false);
+    const [resizeStart, setResizeStart] = useState(null); // Original element bounds when resize started
+    const [lockAspectRatio, setLockAspectRatio] = useState(true);
+
     const {
         activeTool,
         setActiveTool,
@@ -158,16 +164,31 @@ const Whiteboard = () => {
                 const delta = -e.deltaY * zoomSensitivity;
                 const newScale = Math.min(Math.max(viewport.scale + delta, 0.1), 5);
 
+                // Prevent zoom if scale isn't changing
+                if (newScale === viewport.scale) return;
+
                 // Zoom towards pointer
                 const rect = canvas.getBoundingClientRect();
                 const mouseX = e.clientX - rect.left;
                 const mouseY = e.clientY - rect.top;
 
                 const scaleRatio = newScale / viewport.scale;
-                const newX = mouseX - (mouseX - viewport.x) * scaleRatio;
-                const newY = mouseY - (mouseY - viewport.y) * scaleRatio;
 
-                setViewport({ x: newX, y: newY, scale: newScale });
+                // Guard against invalid calculations
+                if (!isFinite(scaleRatio) || scaleRatio === 0) return;
+
+                let newX = mouseX - (mouseX - viewport.x) * scaleRatio;
+                let newY = mouseY - (mouseY - viewport.y) * scaleRatio;
+
+                // Clamp position to reasonable bounds
+                const maxBound = 100000;
+                newX = Math.max(-maxBound, Math.min(maxBound, newX));
+                newY = Math.max(-maxBound, Math.min(maxBound, newY));
+
+                // Only update if values are valid
+                if (isFinite(newX) && isFinite(newY)) {
+                    setViewport({ x: newX, y: newY, scale: newScale });
+                }
             }
         };
 
@@ -333,11 +354,100 @@ const Whiteboard = () => {
         img.onload = () => {
             ctx.save();
             ctx.globalAlpha = element.opacity || 1;
+
+            // Apply rotation if present
+            if (element.rotation) {
+                const centerX = element.x + element.width / 2;
+                const centerY = element.y + element.height / 2;
+                ctx.translate(centerX, centerY);
+                ctx.rotate(element.rotation * Math.PI / 180);
+                ctx.translate(-centerX, -centerY);
+            }
+
             ctx.drawImage(img, element.x, element.y, element.width, element.height);
             ctx.globalAlpha = 1;
             ctx.restore();
         };
         img.src = element.src;
+    };
+
+    // Get resize handle positions for an element
+    const getResizeHandles = (element) => {
+        const padding = 5;
+        const handleSize = 8;
+        const x = element.x - padding;
+        const y = element.y - padding;
+        const w = element.width + padding * 2;
+        const h = element.height + padding * 2;
+
+        return {
+            nw: { x: x - handleSize / 2, y: y - handleSize / 2, cursor: 'nwse-resize' },
+            n: { x: x + w / 2 - handleSize / 2, y: y - handleSize / 2, cursor: 'ns-resize' },
+            ne: { x: x + w - handleSize / 2, y: y - handleSize / 2, cursor: 'nesw-resize' },
+            e: { x: x + w - handleSize / 2, y: y + h / 2 - handleSize / 2, cursor: 'ew-resize' },
+            se: { x: x + w - handleSize / 2, y: y + h - handleSize / 2, cursor: 'nwse-resize' },
+            s: { x: x + w / 2 - handleSize / 2, y: y + h - handleSize / 2, cursor: 'ns-resize' },
+            sw: { x: x - handleSize / 2, y: y + h - handleSize / 2, cursor: 'nesw-resize' },
+            w: { x: x - handleSize / 2, y: y + h / 2 - handleSize / 2, cursor: 'ew-resize' },
+            rotate: { x: x + w / 2 - handleSize / 2, y: y - 30, cursor: 'grab' }
+        };
+    };
+
+    // Check if point is on a resize handle
+    const getHandleAtPoint = (pos, element) => {
+        if (element.type !== 'image' && !['rectangle', 'circle'].includes(element.type)) return null;
+
+        const handles = getResizeHandles(element);
+        const handleSize = 12; // Hit area slightly larger than visual
+
+        for (const [name, handle] of Object.entries(handles)) {
+            if (pos.x >= handle.x - handleSize / 2 && pos.x <= handle.x + handleSize * 1.5 &&
+                pos.y >= handle.y - handleSize / 2 && pos.y <= handle.y + handleSize * 1.5) {
+                return name;
+            }
+        }
+        return null;
+    };
+
+    // Draw resize handles for selected image/shape
+    const drawResizeHandles = (ctx, element) => {
+        if (element.type !== 'image' && !['rectangle', 'circle'].includes(element.type)) return;
+
+        const handles = getResizeHandles(element);
+        const handleSize = 8;
+
+        ctx.save();
+
+        // Draw handles
+        Object.entries(handles).forEach(([name, handle]) => {
+            ctx.fillStyle = name === 'rotate' ? '#FF9500' : '#007AFF';
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+
+            if (name === 'rotate') {
+                // Draw rotation handle as circle
+                ctx.beginPath();
+                ctx.arc(handle.x + handleSize / 2, handle.y + handleSize / 2, handleSize / 2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Draw connecting line to top center
+                ctx.strokeStyle = '#FF9500';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(handle.x + handleSize / 2, handle.y + handleSize);
+                ctx.lineTo(handles.n.x + handleSize / 2, handles.n.y + handleSize);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            } else {
+                // Draw square handles
+                ctx.fillRect(handle.x, handle.y, handleSize, handleSize);
+                ctx.strokeRect(handle.x, handle.y, handleSize, handleSize);
+            }
+        });
+
+        ctx.restore();
     };
 
     const drawRuler = (ctx, ruler) => {
@@ -461,6 +571,11 @@ const Whiteboard = () => {
             ctx.setLineDash([5, 5]);
             ctx.strokeRect(bounds.x - 5, bounds.y - 5, bounds.width + 10, bounds.height + 10);
             ctx.setLineDash([]);
+
+            // Draw resize handles for images and shapes
+            if (element.type === 'image' || ['rectangle', 'circle'].includes(element.type)) {
+                drawResizeHandles(ctx, element);
+            }
         }
     };
 
@@ -636,6 +751,26 @@ const Whiteboard = () => {
 
         // MOUSE/PEN INPUT: Tool Logic
         if (activeTool === 'select') {
+            // Check if clicking on a resize/rotate handle of a selected element
+            if (selectedElements.length === 1) {
+                const selectedEl = selectedElements[0];
+                const handleName = getHandleAtPoint(pos, selectedEl);
+                if (handleName) {
+                    setResizeHandle(handleName);
+                    setIsResizing(true);
+                    setResizeStart({
+                        x: selectedEl.x,
+                        y: selectedEl.y,
+                        width: selectedEl.width,
+                        height: selectedEl.height,
+                        rotation: selectedEl.rotation || 0,
+                        mouseX: pos.x,
+                        mouseY: pos.y
+                    });
+                    return;
+                }
+            }
+
             const clickedElement = elements.find(el => isPointNearElement(pos, el));
             if (!clickedElement) {
                 // Start panning
@@ -740,6 +875,96 @@ const Whiteboard = () => {
             const dy = e.clientY - dragOffset.y;
             setViewport(prev => ({ ...prev, x: prev.x + dx, y: prev.y + dy }));
             setDragOffset({ x: e.clientX, y: e.clientY });
+            return;
+        }
+
+        // Handle resizing/rotating
+        if (isResizing && resizeHandle && resizeStart && selectedElements.length === 1) {
+            const element = selectedElements[0];
+            const dx = pos.x - resizeStart.mouseX;
+            const dy = pos.y - resizeStart.mouseY;
+
+            if (resizeHandle === 'rotate') {
+                // Calculate rotation angle from center
+                const centerX = resizeStart.x + resizeStart.width / 2;
+                const centerY = resizeStart.y + resizeStart.height / 2;
+                const angle = Math.atan2(pos.y - centerY, pos.x - centerX) * 180 / Math.PI + 90;
+                updateElement(element.id, { rotation: angle });
+                // Sync selectedElements with updated element
+                setSelectedElements([{ ...element, rotation: angle }]);
+            } else {
+                // Calculate new dimensions based on handle
+                let newX = resizeStart.x;
+                let newY = resizeStart.y;
+                let newWidth = resizeStart.width;
+                let newHeight = resizeStart.height;
+
+                // Resize logic based on handle
+                switch (resizeHandle) {
+                    case 'se':
+                        newWidth = Math.max(20, resizeStart.width + dx);
+                        newHeight = lockAspectRatio
+                            ? newWidth * (resizeStart.height / resizeStart.width)
+                            : Math.max(20, resizeStart.height + dy);
+                        break;
+                    case 'sw':
+                        newWidth = Math.max(20, resizeStart.width - dx);
+                        newHeight = lockAspectRatio
+                            ? newWidth * (resizeStart.height / resizeStart.width)
+                            : Math.max(20, resizeStart.height + dy);
+                        newX = resizeStart.x + resizeStart.width - newWidth;
+                        break;
+                    case 'ne':
+                        newWidth = Math.max(20, resizeStart.width + dx);
+                        newHeight = lockAspectRatio
+                            ? newWidth * (resizeStart.height / resizeStart.width)
+                            : Math.max(20, resizeStart.height - dy);
+                        if (!lockAspectRatio) newY = resizeStart.y + resizeStart.height - newHeight;
+                        break;
+                    case 'nw':
+                        newWidth = Math.max(20, resizeStart.width - dx);
+                        newHeight = lockAspectRatio
+                            ? newWidth * (resizeStart.height / resizeStart.width)
+                            : Math.max(20, resizeStart.height - dy);
+                        newX = resizeStart.x + resizeStart.width - newWidth;
+                        if (!lockAspectRatio) newY = resizeStart.y + resizeStart.height - newHeight;
+                        break;
+                    case 'n':
+                        newHeight = Math.max(20, resizeStart.height - dy);
+                        newY = resizeStart.y + resizeStart.height - newHeight;
+                        if (lockAspectRatio) {
+                            newWidth = newHeight * (resizeStart.width / resizeStart.height);
+                            newX = resizeStart.x + (resizeStart.width - newWidth) / 2;
+                        }
+                        break;
+                    case 's':
+                        newHeight = Math.max(20, resizeStart.height + dy);
+                        if (lockAspectRatio) {
+                            newWidth = newHeight * (resizeStart.width / resizeStart.height);
+                            newX = resizeStart.x + (resizeStart.width - newWidth) / 2;
+                        }
+                        break;
+                    case 'e':
+                        newWidth = Math.max(20, resizeStart.width + dx);
+                        if (lockAspectRatio) {
+                            newHeight = newWidth * (resizeStart.height / resizeStart.width);
+                            newY = resizeStart.y + (resizeStart.height - newHeight) / 2;
+                        }
+                        break;
+                    case 'w':
+                        newWidth = Math.max(20, resizeStart.width - dx);
+                        newX = resizeStart.x + resizeStart.width - newWidth;
+                        if (lockAspectRatio) {
+                            newHeight = newWidth * (resizeStart.height / resizeStart.width);
+                            newY = resizeStart.y + (resizeStart.height - newHeight) / 2;
+                        }
+                        break;
+                }
+
+                updateElement(element.id, { x: newX, y: newY, width: newWidth, height: newHeight });
+                // Sync selectedElements with updated element
+                setSelectedElements([{ ...element, x: newX, y: newY, width: newWidth, height: newHeight }]);
+            }
             return;
         }
 
@@ -853,6 +1078,14 @@ const Whiteboard = () => {
 
         if (isPanning) {
             setIsPanning(false);
+            return;
+        }
+
+        // Reset resize state
+        if (isResizing) {
+            setIsResizing(false);
+            setResizeHandle(null);
+            setResizeStart(null);
             return;
         }
 

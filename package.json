@@ -1,7 +1,7 @@
 {
   "name": "cassini",
   "private": true,
-  "version": "1.4.1",
+  "version": "1.4.3b",
   "type": "module",
   "scripts": {
     "dev": "vite",
