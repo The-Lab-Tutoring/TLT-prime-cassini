@@ -70,6 +70,9 @@ cp .env.example .env
 # 2. Edit .env and add your Gemini API key
 # VITE_GEMINI_API_KEY=your_actual_api_key_here
 
+# 3. (OPTIONAL) Change Gemini Model in /src/services/geminiService.js
+# Change in line 5 of geminiService.js
+
 # Run development server
 npm run dev
 
